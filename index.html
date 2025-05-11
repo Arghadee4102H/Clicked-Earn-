@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TapSwap MiniApp</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --background-color: #f8f9fa;
+            --surface-color: #ffffff;
+            --text-color: #212529;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --energy-bar-full: #ffd700;
+            --energy-bar-empty: #e0e0e0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevents scrolling of the body itself */
+        }
+
+        #app-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Allows content within pages to scroll */
+            padding-bottom: 60px; /* Space for nav bar */
+        }
+
+        .page {
+            display: none;
+            padding: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .page.active-page {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--surface-color);
+            border-top: 1px solid #e0e0e0;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        #bottom-nav button {
+            flex-grow: 1;
+            padding: 10px 5px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 10px;
+            color: var(--secondary-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        #bottom-nav button .icon {
+            font-size: 20px; /* Emoji size or icon font size */
+            margin-bottom: 4px;
+        }
+
+        #bottom-nav button.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        /* Tap Page Styles */
+        #tap-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: calc(100vh - 60px - 40px); /* Full viewport - nav - padding */
+        }
+
+        #cat-button {
+            font-size: 80px; /* Emoji cat */
+            cursor: pointer;
+            padding: 20px;
+            border-radius: 50%;
+            background-color: #fff0db;
+            user-select: none; /* Prevent text selection on rapid taps */
+            transition: transform 0.1s ease;
+            margin-bottom: 20px;
+        }
+        #cat-button:active {
+            transform: scale(0.95);
+        }
+        #points-display {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #energy-container {
+            width: 80%;
+            max-width: 300px;
+            margin-top: 15px;
+        }
+        #energy-bar-bg {
+            background-color: var(--energy-bar-empty);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            border: 1px solid #ccc;
+        }
+        #energy-bar-fill {
+            background-color: var(--energy-bar-full);
+            height: 100%;
+            width: 100%; /* Will be set by JS */
+            border-radius: 10px;
+            transition: width 0.2s ease-out;
+        }
+        #energy-text {
+            font-size: 14px;
+            color: var(--secondary-color);
+            margin-top: 5px;
+        }
+
+        /* Profile Page Styles */
+        #profile-page .profile-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #profile-page .profile-item strong {
+            color: var(--primary-color);
+        }
+
+        /* Task Page Styles */
+        .task-item {
+            background-color: var(--surface-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .task-item button {
+            padding: 8px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .task-item button:disabled {
+            background-color: var(--success-color);
+            cursor: not-allowed;
+        }
+
+        /* Withdraw Page Styles */
+        #withdraw-page label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #withdraw-page input[type="number"], #withdraw-page select {
+            width: calc(100% - 22px); /* Full width minus padding/border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        #withdraw-page button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #withdraw-page button:hover {
+            opacity: 0.9;
+        }
+        .message {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .message.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
+        .message.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
+
+        h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Profile Page -->
+        <div id="profile-page" class="page">
+            <h2>Profile</h2>
+            <div id="profile-details">
+                <!-- Details will be populated by JS -->
+            </div>
+        </div>
+
+        <!-- Tap Page -->
+        <div id="tap-page" class="page">
+            <div id="points-display">0</div>
+            <div id="cat-button">😼</div>
+            <div id="energy-container">
+                <div id="energy-bar-bg">
+                    <div id="energy-bar-fill"></div>
+                </div>
+                <div id="energy-text">Energy: 0/0</div>
+            </div>
+        </div>
+
+        <!-- Task Page -->
+        <div id="task-page" class="page">
+            <h2>Tasks</h2>
+            <div id="task-list">
+                <!-- Tasks will be populated by JS -->
+            </div>
+        </div>
+
+        <!-- Withdraw Page -->
+        <div id="withdraw-page" class="page">
+            <h2>Withdraw Points</h2>
+            <div id="current-points-withdraw">Your points: 0</div>
+            <label for="withdraw-amount">Amount to Withdraw:</label>
+            <input type="number" id="withdraw-amount" placeholder="Min 10000 points">
+            
+            <label for="withdraw-method">Withdrawal Method:</label>
+            <select id="withdraw-method">
+                <option value="upi">UPI</option>
+                <option value="binance">Binance</option>
+            </select>
+            
+            <button id="withdraw-button">Withdraw</button>
+            <p>Minimum withdrawal: 10,000 points.</p>
+            <div id="withdraw-message" class="message" style="display:none;"></div>
+        </div>
+    </div>
+
+    <nav id="bottom-nav">
+        <button data-page="profile-page"><span class="icon">👤</span>Profile</button>
+        <button data-page="tap-page" class="active"><span class="icon">👆</span>Tap</button>
+        <button data-page="task-page"><span class="icon">📋</span>Tasks</button>
+        <button data-page="withdraw-page"><span class="icon">💸</span>Withdraw</button>
+    </nav>
+
+    <script>
+        const AppState = {
+            userData: {
+                name: "Telegram User",
+                telegramId: null, // In a real app, this would come from Telegram
+                joiningDate: new Date().toISOString().split('T')[0],
+                referralLink: "",
+                points: 0,
+                energy: 1000,
+                maxEnergy: 1000,
+                energyPerTap: 10, // Energy consumed per tap
+                energyRegenRate: 5, // Energy regenerated per second
+                lastEnergyUpdateTimestamp: Date.now(),
+            },
+            tasks: {
+                task1_channel_join: { 
+                    id: 'task1_channel_join',
+                    description: "Join Our Telegram Channel", 
+                    completed: false, 
+                    points: 250, 
+                    link: "https://t.me/earningsceret" // Placeholder link
+                },
+                task2_group_join: { 
+                    id: 'task2_group_join',
+                    description: "Join Our Telegram Group", 
+                    completed: false, 
+                    points: 250, 
+                    link: "https://t.me/earn4102H" // Placeholder link
+                },
+                task3_channel_adv_join: {
+                    id: 'task3_channel_adv_join',
+                    description: "Join Partner Channel", 
+                    completed: false, 
+                    points: 300, 
+                    link: "https://t.me/ShopEarnHub4102h" // Placeholder link
+                },
+                task4_group_adv_join: {
+                    id: 'task4_group_adv_join',
+                    description: "Join Partner Group", 
+                    completed: false, 
+                    points: 300, 
+                    link: "https://t.me/ShopEarnHubChat4102h" // Placeholder link for example
+                }
+            },
+            MIN_WITHDRAWAL_POINTS: 10000,
+        };
+
+        function saveState() {
+            localStorage.setItem('tapSwapState', JSON.stringify(AppState));
+        }
+
+        function loadState() {
+            const savedState = localStorage.getItem('tapSwapState');
+            if (savedState) {
+                const parsedState = JSON.parse(savedState);
+                // Deep merge to preserve structure and defaults if new items are added
+                AppState.userData = { ...AppState.userData, ...parsedState.userData };
+                AppState.tasks = { ...AppState.tasks, ...parsedState.tasks };
+                // Ensure lastEnergyUpdateTimestamp is a number
+                AppState.userData.lastEnergyUpdateTimestamp = Number(AppState.userData.lastEnergyUpdateTimestamp || Date.now());
+
+            } else {
+                // First time setup
+                AppState.userData.telegramId = `user_${Date.now()}${Math.floor(Math.random() * 1000)}`;
+                AppState.userData.referralLink = `https://t.me/your_tap_bot?start=${AppState.userData.telegramId}`;
+                saveState();
+            }
+        }
+        
+        // Navigation
+        const pages = document.querySelectorAll('.page');
+        const navButtons = document.querySelectorAll('#bottom-nav button');
+
+        function showPage(pageId) {
+            // Regenerate energy before showing any page, especially tap page
+            regenerateEnergy(); 
+
+            pages.forEach(page => {
+                page.classList.toggle('active-page', page.id === pageId);
+            });
+            navButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.page === pageId);
+            });
+
+            // Update content for the shown page
+            if (pageId === 'profile-page') renderProfilePage();
+            if (pageId === 'task-page') renderTaskPage();
+            if (pageId === 'withdraw-page') renderWithdrawPage();
+            if (pageId === 'tap-page') {
+                updatePointsDisplay(); // Ensure points are current
+                updateEnergyDisplay(); // Ensure energy is current
+            }
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                showPage(button.dataset.page);
+            });
+        });
+
+        // Profile Page Logic
+        function renderProfilePage() {
+            const profileDetails = document.getElementById('profile-details');
+            profileDetails.innerHTML = `
+                <div class="profile-item"><strong>Name:</strong> ${AppState.userData.name}</div>
+                <div class="profile-item"><strong>Telegram ID:</strong> ${AppState.userData.telegramId}</div>
+                <div class="profile-item"><strong>Joining Date:</strong> ${AppState.userData.joiningDate}</div>
+                <div class="profile-item"><strong>Points:</strong> ${AppState.userData.points.toLocaleString()}</div>
+                <div class="profile-item"><strong>Referral Link:</strong> <input type="text" value="${AppState.userData.referralLink}" readonly style="width: 100%; box-sizing: border-box;" onclick="this.select();"></div>
+            `;
+        }
+
+        // Tap Page Logic
+        const catButton = document.getElementById('cat-button');
+        const pointsDisplay = document.getElementById('points-display');
+        const energyBarFill = document.getElementById('energy-bar-fill');
+        const energyText = document.getElementById('energy-text');
+
+        function updatePointsDisplay() {
+            pointsDisplay.textContent = AppState.userData.points.toLocaleString();
+        }
+
+        function updateEnergyDisplay() {
+            const percentage = (AppState.userData.energy / AppState.userData.maxEnergy) * 100;
+            energyBarFill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+            energyText.textContent = `Energy: ${Math.floor(AppState.userData.energy)}/${AppState.userData.maxEnergy}`;
+        }
+
+        function regenerateEnergy() {
+            const now = Date.now();
+            const elapsedSeconds = (now - AppState.userData.lastEnergyUpdateTimestamp) / 1000;
+            const energyToRegen = elapsedSeconds * AppState.userData.energyRegenRate;
+            
+            if (energyToRegen > 0) {
+                AppState.userData.energy = Math.min(AppState.userData.maxEnergy, AppState.userData.energy + energyToRegen);
+                AppState.userData.lastEnergyUpdateTimestamp = now;
+                // No need to save state here, will be saved on tap or page change
+            }
+            updateEnergyDisplay();
+        }
+
+        catButton.addEventListener('click', () => {
+            regenerateEnergy(); // Ensure energy is up-to-date before tap
+
+            if (AppState.userData.energy >= AppState.userData.energyPerTap) {
+                AppState.userData.energy -= AppState.userData.energyPerTap;
+                AppState.userData.points += AppState.userData.energyPerTap; // Example: 1 point per 1 energy tapped
+                
+                updatePointsDisplay();
+                updateEnergyDisplay();
+                saveState();
+
+                // Click animation (optional)
+                const randomX = (Math.random() - 0.5) * 20;
+                const randomY = (Math.random() - 0.5) * 20 - 30; // Move up
+                showFloatingNumber(`+${AppState.userData.energyPerTap}`, catButton, randomX, randomY);
+
+            } else {
+                // Not enough energy feedback (e.g., shake cat or message)
+                catButton.style.animation = 'shake 0.5s';
+                setTimeout(() => catButton.style.animation = '', 500);
+            }
+        });
+        
+        function showFloatingNumber(text, element, xOffset = 0, yOffset = -30) {
+            const floatingNumber = document.createElement('div');
+            floatingNumber.textContent = text;
+            floatingNumber.style.position = 'absolute';
+            const rect = element.getBoundingClientRect();
+            // Position above the element, slightly randomized
+            floatingNumber.style.left = `${rect.left + rect.width / 2 + xOffset -10}px`; // Centered with offset
+            floatingNumber.style.top = `${rect.top + yOffset}px`;
+            floatingNumber.style.fontSize = '20px';
+            floatingNumber.style.fontWeight = 'bold';
+            floatingNumber.style.color = 'var(--primary-color)';
+            floatingNumber.style.pointerEvents = 'none'; // So it doesn't interfere with clicks
+            floatingNumber.style.transition = 'opacity 1s ease-out, transform 1s ease-out';
+            floatingNumber.style.zIndex = '1001';
+            document.body.appendChild(floatingNumber);
+
+            // Animate
+            requestAnimationFrame(() => {
+                floatingNumber.style.transform = `translateY(-50px) translateX(${xOffset/2}px)`; // Move further up and slightly sideways
+                floatingNumber.style.opacity = '0';
+            });
+            
+            setTimeout(() => {
+                floatingNumber.remove();
+            }, 1000); // Remove after animation
+        }
+
+        // Add CSS for shake animation
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = `@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); }}`;
+        document.head.appendChild(styleSheet);
+
+
+        // Task Page Logic
+        function renderTaskPage() {
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = ''; // Clear previous tasks
+
+            Object.values(AppState.tasks).forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.classList.add('task-item');
+                
+                const taskInfo = document.createElement('div');
+                taskInfo.innerHTML = `<strong>${task.description}</strong><br><small>+${task.points.toLocaleString()} points</small>`;
+                
+                const taskButton = document.createElement('button');
+                if (task.completed) {
+                    taskButton.textContent = 'Completed';
+                    taskButton.disabled = true;
+                } else {
+                    taskButton.textContent = 'Join & Claim';
+                    taskButton.onclick = () => completeTask(task.id);
+                }
+                
+                taskItem.appendChild(taskInfo);
+                taskItem.appendChild(taskButton);
+                taskList.appendChild(taskItem);
+            });
+        }
+
+        function completeTask(taskId) {
+            const task = AppState.tasks[taskId];
+            if (task && !task.completed) {
+                // Simulate opening Telegram link
+                // In a real Telegram Web App, you might use Telegram.WebApp.openTelegramLink(task.link);
+                // For a browser, window.open(task.link, '_blank');
+                // For this simulation, we'll assume they "joined" after clicking.
+                // A timeout could simulate them going to Telegram and coming back.
+                const userConfirmed = confirm(`This would open: ${task.link}\n\nMark as completed and claim ${task.points} points?`);
+
+                if (userConfirmed) {
+                    task.completed = true;
+                    AppState.userData.points += task.points;
+                    saveState();
+                    renderTaskPage(); // Re-render tasks to show updated status
+                    updatePointsDisplay(); // Update points everywhere
+                    alert(`Task "${task.description}" completed! You earned ${task.points} points.`);
+                }
+            }
+        }
+
+        // Withdraw Page Logic
+        const withdrawAmountInput = document.getElementById('withdraw-amount');
+        const withdrawMethodSelect = document.getElementById('withdraw-method');
+        const withdrawButton = document.getElementById('withdraw-button');
+        const withdrawMessageDiv = document.getElementById('withdraw-message');
+        const currentPointsWithdrawDiv = document.getElementById('current-points-withdraw');
+
+        function renderWithdrawPage() {
+            currentPointsWithdrawDiv.textContent = `Your points: ${AppState.userData.points.toLocaleString()}`;
+            withdrawAmountInput.value = '';
+            withdrawMessageDiv.style.display = 'none';
+            withdrawMessageDiv.textContent = '';
+        }
+        
+        // Simulate API call for withdrawal
+        async function simulateWithdrawAPI(amount, method) {
+            // This simulates a fetch call to a backend.
+            // In a real app:
+            // const response = await fetch('/api/withdraw.php', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' /*, 'Authorization': 'Bearer YOUR_SESSION_TOKEN_OR_INIT_DATA' */ },
+            //     body: JSON.stringify({ amount, method, userId: AppState.userData.telegramId })
+            // });
+            // if (!response.ok) {
+            //     const errorData = await response.json().catch(() => ({ message: 'Withdrawal request failed with status: ' + response.status }));
+            //     throw new Error(errorData.message || 'Unknown withdrawal error');
+            // }
+            // return response.json();
+
+            console.log(`Simulating withdrawal API call: Amount=${amount}, Method=${method}, UserID=${AppState.userData.telegramId}`);
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    // Simulate backend validation and processing
+                    if (amount < AppState.MIN_WITHDRAWAL_POINTS) {
+                        resolve({ success: false, message: `Minimum withdrawal amount is ${AppState.MIN_WITHDRAWAL_POINTS} points.` });
+                    } else if (amount > AppState.userData.points) {
+                        resolve({ success: false, message: "Insufficient points for this withdrawal." });
+                    } else {
+                        // Simulate successful withdrawal processing
+                        // In a real backend, this would involve database updates, payment gateway interaction, etc.
+                        // The PHP backend would use transactions for atomicity.
+                        resolve({ success: true, message: `Withdrawal of ${amount} points via ${method} processed successfully. (Simulated)`, newBalance: AppState.userData.points - amount });
+                    }
+                }, 1500); // Simulate network delay
+            });
+        }
+
+        withdrawButton.addEventListener('click', async () => {
+            const amount = parseInt(withdrawAmountInput.value);
+            const method = withdrawMethodSelect.value;
+
+            withdrawMessageDiv.style.display = 'none';
+            withdrawMessageDiv.className = 'message';
+
+            if (isNaN(amount) || amount <= 0) {
+                withdrawMessageDiv.textContent = 'Please enter a valid amount.';
+                withdrawMessageDiv.classList.add('error');
+                withdrawMessageDiv.style.display = 'block';
+                return;
+            }
+
+            if (amount < AppState.MIN_WITHDRAWAL_POINTS) {
+                withdrawMessageDiv.textContent = `Minimum withdrawal is ${AppState.MIN_WITHDRAWAL_POINTS} points.`;
+                withdrawMessageDiv.classList.add('error');
+                withdrawMessageDiv.style.display = 'block';
+                return;
+            }
+
+            if (amount > AppState.userData.points) {
+                withdrawMessageDiv.textContent = 'Insufficient points.';
+                withdrawMessageDiv.classList.add('error');
+                withdrawMessageDiv.style.display = 'block';
+                return;
+            }
+
+            withdrawButton.disabled = true;
+            withdrawButton.textContent = 'Processing...';
+
+            try {
+                // This is where you'd call your actual backend API.
+                // The PHP backend would handle sessions, use prepared statements for DB security,
+                // and use transactions for operations like deducting points and recording withdrawal.
+                const result = await simulateWithdrawAPI(amount, method);
+
+                if (result.success) {
+                    AppState.userData.points -= amount; // Or use result.newBalance if API returns it
+                    saveState();
+                    updatePointsDisplay(); // Update points on tap page too
+                    currentPointsWithdrawDiv.textContent = `Your points: ${AppState.userData.points.toLocaleString()}`; // Update on withdraw page
+                    withdrawAmountInput.value = '';
+                    
+                    withdrawMessageDiv.textContent = result.message;
+                    withdrawMessageDiv.classList.add('success');
+                } else {
+                    withdrawMessageDiv.textContent = result.message || 'Withdrawal failed. Please try again.';
+                    withdrawMessageDiv.classList.add('error');
+                }
+            } catch (error) {
+                console.error("Withdrawal error:", error);
+                withdrawMessageDiv.textContent = 'An unexpected error occurred: ' + error.message;
+                withdrawMessageDiv.classList.add('error');
+            } finally {
+                withdrawMessageDiv.style.display = 'block';
+                withdrawButton.disabled = false;
+                withdrawButton.textContent = 'Withdraw';
+            }
+        });
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+
+            // Initialize Telegram WebApp SDK if available (for real deployment)
+            // if (window.Telegram && window.Telegram.WebApp) {
+            //     Telegram.WebApp.ready();
+            //     // You could potentially get user data from Telegram.WebApp.initDataUnsafe.user
+            //     const tgUser = Telegram.WebApp.initDataUnsafe.user;
+            //     if (tgUser) {
+            //         AppState.userData.name = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim();
+            //         AppState.userData.telegramId = tgUser.id.toString();
+            //         // Note: referral link might need to be generated or fetched based on this ID
+            //     }
+            //     // Prevent back button from closing app
+            //     Telegram.WebApp.BackButton.hide();
+            // }
+
+
+            // Set initial page (Tap page)
+            showPage('tap-page');
+            
+            // Start energy regeneration interval for visual updates
+            // The core logic uses timestamp differences, this is for UI refresh.
+            setInterval(() => {
+                if (document.getElementById('tap-page').classList.contains('active-page')) {
+                    regenerateEnergy(); // This will also update the display
+                }
+            }, 1000); // Refresh UI every second if tap page is active
+        });
+
+    </script>
+</body>
+</html>
